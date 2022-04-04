@@ -1,7 +1,6 @@
 import numpy as np 
 import pandas as pd 
  
-from sklearn.preprocessing import LabelBinarizer 
 from sklearn.ensemble import RandomForestClassifier 
 from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold 
 from sklearn.metrics import  confusion_matrix, f1_score
@@ -36,7 +35,7 @@ param_grid = {
 } 
  
 scorers = { 
-'f1_score': make_scorer(f1_score), 
+    'f1_score': make_scorer(f1_score), 
 } 
  
  
@@ -65,13 +64,6 @@ def grid_search_wrapper(refit_score='fb_score'):
  
 grid_search_clf = grid_search_wrapper(refit_score='fb_score') 
 y_scores = grid_search_clf.predict_proba(X_test)[:, 1]  
- 
-def adjusted_classes(y_scores, t): 
-    """ 
-    This function adjusts class predictions based on the prediction threshold (t). 
-    Will only work for binary classification problems. 
-    """ 
-    return [1 if y >= t else 0 for y in y_scores]
  
 random_forest = RandomForestClassifier(n_estimators=100) 
 random_forest.fit(X_train, y_train) 
