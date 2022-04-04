@@ -1,4 +1,4 @@
-user_journey,age_group,language_preferred,journey_number,start_date,end_date,events_combo,touchpoint_count,duration,conversion,email,facebook,house_ads,instagram,push
+id,age,language,journey,start_date,end_date,events_combo,touchpoint,duration,conversion,email,facebook,house_ads,instagram,push
 a100002819-1,55+ years,English,1,2018-01-25,2018-01-25,House Ads,1,0,0,0,0,1,0,0
 a100004382-1,45-55 years,English,1,2018-01-17,2018-01-27,"Facebook, House Ads",2,10,0,0,1,1,0,0
 a100004162-1,24-30 years,English,1,2018-01-11,2018-01-11,Push,1,0,0,0,0,0,0,1
