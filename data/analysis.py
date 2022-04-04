@@ -11,7 +11,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from imblearn.over_sampling import SMOTE 
 import matplotlib.pyplot as plt 
 
-df = pd.read_csv('journeys_test.csv') 
+df = pd.read_csv('journeys.csv') 
 targets = df['Conversion'] 
 df.drop(['Journey Start Date', 'Journey End Date', 'Events Combo', 'User-Journey'], axis=1, inplace=True) 
 df = pd.get_dummies(df) 
