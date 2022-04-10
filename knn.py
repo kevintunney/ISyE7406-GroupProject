@@ -67,14 +67,12 @@ def main():
 
 
     # reference https://machinelearningknowledge.ai/knn-classifier-in-sklearn-using-gridsearchcv-with-example/
-    X_train, X_test, y_train, y_test = train_test_split(df,labels, test_size=0.2, random_state=123)
-
     # defining parameter range
-    # referebce https://towardsdatascience.com/explain-any-models-with-the-shap-values-use-the-kernelexplainer-79de9464897a
+    # reference https://towardsdatascience.com/explain-any-models-with-the-shap-values-use-the-kernelexplainer-79de9464897a
     knn = KNeighborsClassifier()
     k_range = list(range(k_min, k_max))
     param_grid = dict(n_neighbors=k_range)
-    grid = GridSearchCV(knn, param_grid, cv=10, scoring='accuracy', return_train_score=False,verbose=1)
+    grid = GridSearchCV(knn, param_grid, cv=10, scoring='f1', return_train_score=False,verbose=1)
     
     # fitting the model for grid search
     model = grid.fit(X_train, y_train)
