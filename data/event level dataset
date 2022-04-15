@@ -1,0 +1,26 @@
+Channel,Model,Result,Conversions
+Facebook,First Touch,Facebook - First Touch,117
+Instagram,First Touch,Instagram - First Touch,99
+House Ads,First Touch,House Ads - First Touch,391
+Push ,First Touch,Push  - First Touch,50
+Email,First Touch,Email - First Touch,79
+Facebook,Last Touch,Facebook - Last Touch,138
+Instagram,Last Touch,Instagram - Last Touch,149
+House Ads,Last Touch,House Ads - Last Touch,288
+Push ,Last Touch,Push  - Last Touch,65
+Email,Last Touch,Email - Last Touch,96
+Facebook,Linear,Facebook - Linear,127.4833333
+Instagram,Linear,Instagram - Linear,122.45
+House Ads,Linear,House Ads - Linear,340.75
+Push ,Linear,Push  - Linear,57.9
+Email,Linear,Email - Linear,87.41666667
+Facebook,Markov Chain,Facebook - Markov Chain,132.3359601
+Instagram,Markov Chain,Instagram - Markov Chain,131.5193594
+House Ads,Markov Chain,House Ads - Markov Chain,311.755991
+Push ,Markov Chain,Push  - Markov Chain,63.5166895
+Email,Markov Chain,Email - Markov Chain,96.87199999
+Facebook,Shapley,Facebook - Shapley,131.786277
+Instagram,Shapley,Instagram - Shapley,127.9334937
+House Ads,Shapley,House Ads - Shapley,332.4713445
+Push ,Shapley,Push  - Shapley,59.65063066
+Email,Shapley,Email - Shapley,84.15825411
