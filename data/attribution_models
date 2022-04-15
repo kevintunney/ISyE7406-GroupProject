@@ -1,0 +1,333 @@
+#install packages
+import numpy as np
+import pandas as pd
+
+### First Touch, Last Touch, and Linear Attribution
+
+#load dataset
+df = pd.read_csv('DMSL - event level dataset.csv')
+
+#sort dataset by User_ID, then Sequence
+df = df.rename(columns={"Date": "date", "touchpoint": "event"})
+df = df.sort_values(["user_id", "date"], ascending = (True, True)).reset_index(drop=True)
+
+#replace user ID numbers with their relative ranking, starting at 0
+df['user_id'] = df['user_id'].rank(method='dense').astype('int') - 1
+
+#replace 
+df["event"].replace({"Conversion": "conv"}, inplace=True)
+df_raw = df
+
+#define lists of unique Events
+Unique_Events = list(df['event'].unique())
+Unique_Events.remove('conv')
+
+#define lists of unique User IDs
+UserID_List = list(df['user_id'].unique())
+
+print(len(df))
+
+#number of conversions for QA
+len(df[df.event == 'conv'])
+
+#determine journeys - and reset the journey after a user converts
+curr_ID = UserID_List[0]
+journey_count = 0
+journeys = []
+
+for index, row in df.iterrows():
+    if row['user_id'] == curr_ID:
+        journeys.append(journey_count)
+        if row['event'] == 'conv':
+            journey_count += 1
+    if row['user_id'] > curr_ID:
+        curr_ID += 1
+        journey_count = 0
+        journeys.append(journey_count)
+        if row['event'] == 'conv':
+            journey_count += 1
+df['journey'] = journeys
+
+#combine User_IDs with Journeys - we will use this as our iterator
+df["user_journey"] = df["user_id"].astype(str) + '|' + df["journey"].astype(str)
+
+
+### separate journeys - one touch and multi touch
+### one touch journeys should give the full credit to their only touchpoint
+### multi touch journeys should be awarded credit based on linear, markov, shapley models
+df1 = df.groupby(['user_journey'], as_index=False)['event'].last().rename(columns={"event": "Last Event"})
+df2 = df.groupby(['user_journey'], as_index=False).count().rename(columns={"date": "Length"})
+df2 = df2[['user_journey', 'Length']]
+
+df3 = pd.merge(df1, df2, on="user_journey")
+df_1touch = df3[(df3['Length'] == 2) & (df3['Last Event'] == 'conv')]
+df_0touch = df3[(df3['Length'] == 1) & (df3['Last Event'] == 'conv')]
+
+df_multitouch = df3[(df3['Length'] >= 3) | ((df3['Length'] >= 2) & (df3['Last Event'] != 'conv'))]
+
+df_multitouch = df_multitouch.merge(df, how='inner', on='user_journey')
+df_1touch = df_1touch.merge(df, how='inner', on='user_journey')
+
+User_Journey_list = list(df_multitouch['user_journey'].unique())
+User_Journey_list_1touch = list(df_1touch['user_journey'].unique())
+
+
+#create a list of lists; the primary list is broken out by journey, the secondary lists are the events each user's path
+User_Events = []
+
+for i in User_Journey_list:
+    y = ['start']
+    User_sequence = df_multitouch[(df_multitouch.user_journey == i)]
+    
+    for j in User_sequence['event']:
+        y.append(j)
+    User_Events.append(y)
+    
+#last touch, first touch, and linear attribution
+
+#define counters
+last_touch = dict()
+for i in Unique_Events:
+    last_touch[i] = last_touch.get(i, 0)
+    
+first_touch = dict()
+for i in Unique_Events:
+    first_touch[i] = first_touch.get(i, 0)
+    
+linear = dict()
+for i in Unique_Events:
+    linear[i] = linear.get(i, 0)
+
+conv_count_QA = 0
+
+#loop through journeys
+for i in User_Events:
+    if i[-1] == 'conv' and len(i) > 2:
+        last_touch[i[-2]] += 1
+        first_touch[i[1]] += 1
+        
+        #linear
+        journey_len = len(i[1:-1])
+        for j in i[1:-1]:
+            linear[j] += (1 / (journey_len + 0.00000000000000000000000000001))
+            
+            
+            
+### repeat above step but for single touch conversions
+
+User_Events = []
+
+for i in User_Journey_list_1touch:
+    y = ['start']
+    User_sequence = df_1touch[(df_1touch.user_journey == i)]
+    
+    for j in User_sequence['event']:
+        y.append(j)
+    User_Events.append(y)
+    
+### account for single touch conversions
+
+#define counters
+one_touch = dict()
+for i in Unique_Events:
+    one_touch[i] = one_touch.get(i, 0)
+    
+#loop through journeys
+for i in User_Events:
+    if (i[-1] == 'conv') & (len(i) > 2):
+        one_touch[i[1]] += 1
+
+len(df[df.event == 'conv']) == sum(one_touch.values()) + round(sum(linear.values())) + len(df_0touch)
+
+
+from collections import Counter
+
+linear = Counter(linear) + Counter(one_touch)
+first_touch = Counter(first_touch) + Counter(one_touch)
+last_touch = Counter(last_touch) + Counter(one_touch)
+
+print(round(sum(linear.values())))
+print(round(sum(first_touch.values())))
+print(round(sum(last_touch.values())))
+
+
+linear
+first_touch
+last_touch
+
+
+
+
+
+### Markov Chain model
+
+### separate journeys - one touch and multi touch
+### one touch journeys should give the full credit to their only touchpoint
+### multi touch journeys should be awarded credit based on linear, markov, shapley models
+df1 = df.groupby(['user_journey'], as_index=False)['event'].last().rename(columns={"event": "Last Event"})
+df2 = df.groupby(['user_journey'], as_index=False).count().rename(columns={"date": "Length"})
+df2 = df2[['user_journey', 'Length']]
+
+df3 = pd.merge(df1, df2, on="user_journey")
+
+df_1touch = df3[(df3['Length'] == 2) & (df3['Last Event'] == 'conv')]
+df_1touch = df_1touch.merge(df, how='inner', on='user_journey')
+
+df_multitouch = df3[(df3['Length'] >= 3) | ((df3['Length'] >= 2) & (df3['Last Event'] != 'conv'))]
+df_multitouch = df_multitouch.merge(df, how='inner', on='user_journey')
+
+df = df_multitouch.drop(['Length', 'Last Event', 'journey'], axis=1)
+User_Journey_list_1touch = list(df_1touch['user_journey'].unique())
+User_Journey_list = list(df_multitouch['user_journey'].unique())
+
+
+### calculate conversions for multi-touch
+#create a list of lists; the primary list is broken out by journey, the secondary lists are the events each user's path
+User_Events = []
+for i in User_Journey_list:
+    y = ['start']
+    User_sequence = df[(df.user_journey == i)]
+    
+    for j in User_sequence['event']:
+        if y[-1] != j: # ~no repeat events within the same journeys~
+            y.append(j) 
+    User_Events.append(y)
+
+j = []
+
+for i in User_Events:
+    if i[-1] != 'conv':
+        i.append('null')
+    j.append(i)
+
+User_Events = j
+
+
+#create a list of all event-paths that each User experienced
+event_paths = []
+
+for i in User_Events:
+    for j in list(range(0,len(i)-1)):
+        event_paths.append(i[j] + ' > ' + i[j+1])
+
+Paths = []
+
+for i in User_Events:
+    journey = ' > '.join(i)
+    Paths.append(journey)
+
+Paths[0]
+
+
+pip install markov-model-attribution
+
+import markov_model_attribution as mma
+
+df_paths = pd.DataFrame({'Paths':Paths})
+
+markov = mma.run_model(paths=df_paths)
+
+markov = Counter(markov['markov_conversions']) + Counter(one_touch)
+# This outputs a dictionary containing the markov conversion count
+markov
+
+
+
+
+
+### Shapley Value Model
+import itertools
+from collections import defaultdict
+from itertools import permutations,combinations
+
+df = df_raw
+
+df['converted'] = np.where(df['event'] == 'conv', 1, 0)
+data = df.rename(columns={"event": "marketing_channel", "npijourney": "user_id", "date": "date_served"})
+
+### dropping null values
+data.dropna(axis=0, inplace=True)
+
+### converting date_served into date format
+data['date_served'] = pd.to_datetime(data['date_served'], format='%y/%m/%d', errors='coerce')
+
+data = data.drop(['user_id'], axis=1)
+data = data.rename(columns={"user_journey":"user_id"})
+
+### create a channel mix conversion table 
+# first level - sort
+data_lvl1 = data[['user_id', 'marketing_channel', 'converted']].sort_values(by=['user_id', 'marketing_channel'])
+
+# second level - groupby userid, concat distinct marketing channel and label if any conversion took place with this channel mix
+data_lvl2 = data_lvl1.groupby(['user_id'], as_index=False).agg({'marketing_channel': lambda x: ','.join(map(str,x.unique())),'converted':max})
+data_lvl2.rename(columns={'marketing_channel':'marketing_channel_subset'}, inplace=True)
+
+# third level - summing up the conversion which took place for each channel mix
+data_lvl3 = data_lvl2.groupby(['marketing_channel_subset'], as_index=False).agg(sum)
+
+#### setting up the formulas for shapley value
+
+
+### return all possible combination of the channel
+def power_set(List):
+    PS = [list(j) for i in range(len(List)) for j in itertools.combinations(List, i+1)]
+    return PS
+  
+
+### calculating the factorial of a number
+def factorial(n):
+    if n == 0:
+        return 1
+    else:
+        return n * factorial(n-1)
+       
+
+### compute the worth of each coalition
+def v_function(A,C_values):
+    subsets_of_A = subsets(A)
+    worth_of_A=0
+    for subset in subsets_of_A:
+        if subset in C_values:
+            worth_of_A += C_values[subset]
+    return worth_of_A
+
+
+def subsets(s):
+    if len(s)==1:
+        return s
+    else:
+        sub_channels=[]
+        for i in range(1,len(s)+1):
+            sub_channels.extend(map(list,itertools.combinations(s, i)))
+    return list(map(",".join,map(sorted,sub_channels)))
+  
+
+def calculate_shapley(df, channel_name, conv_name):
+    c_values = df.set_index(channel_name).to_dict()[conv_name]
+    df['channels'] = df[channel_name].apply(lambda x: x if len(x.split(",")) == 1 else np.nan)
+    channels = list(df['channels'].dropna().unique())
+    
+    v_values = {}
+    for A in power_set(channels):
+        v_values[','.join(sorted(A))] = v_function(A,c_values)
+    n=len(channels)
+    shapley_values = defaultdict(int)
+
+    for channel in channels:
+        for A in v_values.keys():
+            if channel not in A.split(","):
+                cardinal_A=len(A.split(","))
+                A_with_channel = A.split(",")
+                A_with_channel.append(channel)            
+                A_with_channel=",".join(sorted(A_with_channel))
+                weight = (factorial(cardinal_A)*factorial(n-cardinal_A-1)/factorial(n))
+                contrib = (v_values[A_with_channel]-v_values[A])
+                shapley_values[channel] += weight * contrib
+        shapley_values[channel]+= v_values[channel]/n 
+        
+    return shapley_values
+    
+    
+shapley_attribution = calculate_shapley(data_lvl3, 'marketing_channel_subset', 'converted')
+shapley_attribution
+
